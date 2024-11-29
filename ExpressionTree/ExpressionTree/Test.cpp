@@ -36,9 +36,40 @@ void Test2()
 	cout << endl;
 }
 
+void Test3()
+{
+	string s = "^ x ^ x 2 ";
+	ExpressionTree t(s);
+	t.Print();
+	cout << endl;
+
+	t.Diff('x');
+	t.Print();
+	cout << endl;
+
+	t.Assign('x', 3);
+	cout << t.Value() << endl;
+}
+
+void Test4()
+{
+	string s = "^ x ^ x 2 ";
+	ExpressionTree t(s);
+	t.Print();
+	cout << endl;
+
+	t.Diff('x');
+	t.Print();
+	cout << endl;
+
+	t.MergeConst();
+	t.Print();
+	cout << endl;
+}
+
 int main()
 {
-	Test1();
+	Test4();
 
 	return 0;
 }
