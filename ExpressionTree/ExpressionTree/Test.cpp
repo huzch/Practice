@@ -1,14 +1,8 @@
-#include<iostream>
-#include<string>
-#include<cctype>
-#include<cmath>
-using namespace std;
-
 #include"ExpressionTree.h"
 
 void Test1()
 {
-	string s = "+*5^x2*8x";
+	string s = "+++*3^ *3*2^ x2x6";
 	ExpressionTree t(s);
 
 	t.Print();
@@ -53,7 +47,7 @@ void Test3()
 
 void Test4()
 {
-	string s = "^ x ^ x 2 ";
+	string s = "+++*3^ *3*2^ x2x6";
 	ExpressionTree t(s);
 	t.Print();
 	cout << endl;

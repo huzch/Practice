@@ -1,5 +1,11 @@
 #pragma once
 
+#include<iostream>
+#include<string>
+#include<cctype>
+#include<cmath>
+using namespace std;
+
 struct TreeNode
 {
 	double _num;
