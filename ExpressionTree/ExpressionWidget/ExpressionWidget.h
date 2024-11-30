@@ -4,10 +4,14 @@
 #include <QGraphicsScene>
 #include <QGraphicsView>
 #include <QGraphicsTextItem>
+#include <QSplitter>
 #include <QVBoxLayout>
 #include <QLineEdit>
 #include <QPushButton>
 #include <QLabel>
+#include <QPen>
+#include <QBrush>
+#include <QFont>
 #include "ExpressionTree.h"
 
 class ExpressionWidget : public QWidget
@@ -24,249 +28,249 @@ public:
         view->setRenderHint(QPainter::TextAntialiasing);
         setWindowTitle("Expression Tree Visualization");
 
-        // 创建布局管理器
-        QVBoxLayout* layout = new QVBoxLayout(this);
-        layout->addWidget(view);
+        // 创建主布局
+        auto mainLayout = new QHBoxLayout(this);
 
-        // 创建输入框，用于输入前缀表达式
-        prefixInput = new QLineEdit(this);
-        prefixInput->setPlaceholderText("Enter prefix expression (e.g., +AB)");
-        layout->addWidget(prefixInput);
+        // 使用 QSplitter 分割左右区域
+        auto splitter = new QSplitter(Qt::Horizontal, this);
+        mainLayout->addWidget(splitter);
 
-        // 创建按钮，用于构建输入的前缀表达式
-        buildTreeButton = new QPushButton("Build Tree", this);
-        connect(buildTreeButton, &QPushButton::clicked, this, &ExpressionWidget::onBuildTreeButtonClicked);
-        layout->addWidget(buildTreeButton);
-
-        // 创建并设置QLabel，用于显示中缀表达式
-        infixLabel = new QLabel(this);
-        infixLabel->setText("Infix Expression: " + QString::fromStdString(tree.GetInfix()));
-        layout->addWidget(infixLabel);
-
-        // 创建输入框，用于输入变量和值
-        varNameInput = new QLineEdit(this);
-        varNameInput->setPlaceholderText("Enter variable name");
-        layout->addWidget(varNameInput);
-
-        varValueInput = new QLineEdit(this);
-        varValueInput->setPlaceholderText("Enter variable value");
-        layout->addWidget(varValueInput);
-
-        // 创建按钮，点击后为变量赋值
-        assignButton = new QPushButton("Assign", this);
-        connect(assignButton, &QPushButton::clicked, this, &ExpressionWidget::onAssignButtonClicked);
-        layout->addWidget(assignButton);
-
-        // 创建按钮，点击后计算表达式的值
-        valueButton = new QPushButton("Value", this);
-        connect(valueButton, &QPushButton::clicked, this, &ExpressionWidget::onValueButtonClicked);
-        layout->addWidget(valueButton);
-
-        // 显示计算结果
-        resultLabel = new QLabel(this);
-        resultLabel->setText("Result: ");
-        layout->addWidget(resultLabel);
-
-        // 创建输入框，用于输入要求偏导的变量
-        diffVarInput = new QLineEdit(this);
-        diffVarInput->setPlaceholderText("Enter variable for partial derivative");
-        layout->addWidget(diffVarInput);
-
-        // 创建按钮，点击后求偏导
-        diffButton = new QPushButton("Diff", this);
-        connect(diffButton, &QPushButton::clicked, this, &ExpressionWidget::onDiffButtonClicked);
-        layout->addWidget(diffButton);
-
-        // 显示偏导结果
-        diffLabel = new QLabel(this);
-        diffLabel->setText("Partial Derivative: ");
-        layout->addWidget(diffLabel);
-
-        // 创建按钮，点击后进行常数合并
-        mergeConstButton = new QPushButton("Merge Const", this);
-        connect(mergeConstButton, &QPushButton::clicked, this, &ExpressionWidget::onMergeConstButtonClicked);
-        layout->addWidget(mergeConstButton);
-
-        // 显示常数合并后的结果
-        mergeConstLabel = new QLabel(this);
-        mergeConstLabel->setText("Merged Expression: ");
-        layout->addWidget(mergeConstLabel);
-
-        drawTree(tree);
+        // 左侧：表达式树的可视化
+        auto leftWidget = new QWidget(this);
+        auto leftLayout = new QVBoxLayout(leftWidget);
+        leftLayout->addWidget(view);
+        splitter->addWidget(leftWidget);
 
         // 设置场景大小
-        view->setSceneRect(0, 0, 1000, 800);
-        setFixedSize(1000, 800);  // 固定窗口大小
+        view->setSceneRect(0, 0, 2000, 1000);
+
+        // 右侧：输入控件和操作按钮
+        auto rightWidget = new QWidget(this);
+        auto rightLayout = new QVBoxLayout(rightWidget);
+        splitter->addWidget(rightWidget);
+
+        // 中缀表达式显示
+        auto infixLabel = new QLabel(this);
+        infixLabel->setText("Infix Expression: " + QString::fromStdString(tree.GetInfix()));
+        rightLayout->addWidget(infixLabel);
+
+        // 前缀表达式输入和构建按钮
+        auto prefixInput = new QLineEdit(this);
+        prefixInput->setPlaceholderText("Enter prefix expression (e.g., +AB)");
+        rightLayout->addWidget(prefixInput);
+
+        auto buildTreeButton = new QPushButton("Build Tree", this);
+        connect(buildTreeButton, &QPushButton::clicked, [=]() {
+            QString prefix = prefixInput->text();
+            if (prefix.isEmpty()) {
+                return;
+            }
+            tree = ExpressionTree(prefix.toStdString());
+            infixLabel->setText("Infix Expression: " + QString::fromStdString(tree.GetInfix()));
+            scene->clear();
+            drawTree(tree);
+            });
+        rightLayout->addWidget(buildTreeButton);
+
+        // 表达式复合输入和按钮
+        auto opNameInput = new QLineEdit(this);
+        opNameInput->setPlaceholderText("Enter operator name");
+        rightLayout->addWidget(opNameInput);
+
+        auto anotherPrefixInput = new QLineEdit(this);
+        anotherPrefixInput->setPlaceholderText("Enter prefix expression (e.g., +CD)");
+        rightLayout->addWidget(anotherPrefixInput);
+
+        auto compoundButton = new QPushButton("Compound", this);
+        connect(compoundButton, &QPushButton::clicked, [=]() {
+            QString opName = opNameInput->text();
+            QString anotherPrefix = anotherPrefixInput->text();
+            if (opName.isEmpty() || anotherPrefix.isEmpty()) {
+                return;
+            }
+            char opChar = opName.toStdString()[0];
+            tree = Compound(opChar, tree, ExpressionTree(anotherPrefix.toStdString()));
+            infixLabel->setText("Infix Expression: " + QString::fromStdString(tree.GetInfix()));
+            scene->clear();
+            drawTree(tree);
+            });
+        rightLayout->addWidget(compoundButton);
+
+        // 计算结果显示和赋值输入
+        auto resultLabel = new QLabel(this);
+        resultLabel->setText("Result: ");
+        rightLayout->addWidget(resultLabel);
+
+        auto varNameInput = new QLineEdit(this);
+        varNameInput->setPlaceholderText("Enter variable name");
+        rightLayout->addWidget(varNameInput);
+
+        auto varValueInput = new QLineEdit(this);
+        varValueInput->setPlaceholderText("Enter variable value");
+        rightLayout->addWidget(varValueInput);
+
+        auto assignButton = new QPushButton("Assign", this);
+        connect(assignButton, &QPushButton::clicked, [=]() {
+            QString varName = varNameInput->text();
+            QString varValue = varValueInput->text();
+            if (varName.isEmpty() || varValue.isEmpty()) {
+                return;
+            }
+            char varChar = varName.toStdString()[0];
+            tree.Assign(varChar, std::stod(varValue.toStdString()));
+            infixLabel->setText("Infix Expression: " + QString::fromStdString(tree.GetInfix()));
+            scene->clear();
+            drawTree(tree);
+            });
+        rightLayout->addWidget(assignButton);
+
+        auto valueButton = new QPushButton("Value", this);
+        connect(valueButton, &QPushButton::clicked, [=]() {
+            DATATYPE result = tree.Value();
+            resultLabel->setText("Result: " + QString::number(result));
+            });
+        rightLayout->addWidget(valueButton);
+
+        // 偏导结果显示和输入
+        auto diffLabel = new QLabel(this);
+        diffLabel->setText("Partial Derivative: ");
+        rightLayout->addWidget(diffLabel);
+
+        auto diffVarInput = new QLineEdit(this);
+        diffVarInput->setPlaceholderText("Enter variable for partial derivative");
+        rightLayout->addWidget(diffVarInput);
+
+        auto diffButton = new QPushButton("Diff", this);
+        connect(diffButton, &QPushButton::clicked, [=]() {
+            QString diffVar = diffVarInput->text();
+            if (diffVar.isEmpty()) {
+                return;
+            }
+            char varChar = diffVar.toStdString()[0];
+            tree.Diff(varChar);
+            diffLabel->setText("Partial Derivative: " + QString::fromStdString(tree.GetInfix()));
+            scene->clear();
+            drawTree(tree);
+            });
+        rightLayout->addWidget(diffButton);
+
+        // 常数合并结果显示和按钮
+        auto mergeConstLabel = new QLabel(this);
+        mergeConstLabel->setText("Merged Expression: ");
+        rightLayout->addWidget(mergeConstLabel);
+
+        auto mergeConstButton = new QPushButton("Merge Const", this);
+        connect(mergeConstButton, &QPushButton::clicked, [=]() {
+            tree.MergeConst();
+            mergeConstLabel->setText("Merged Expression: " + QString::fromStdString(tree.GetInfix()));
+            scene->clear();
+            drawTree(tree);
+            });
+        rightLayout->addWidget(mergeConstButton);
+
+        // 设置 splitter 的默认比例
+        splitter->setStretchFactor(0, 3);  // 左侧占 3
+        splitter->setStretchFactor(1, 1);  // 右侧占 1
+
+        // 设置窗口大小
+        setFixedSize(1500, 800);
     }
 
     ~ExpressionWidget()
     {
         delete scene;
         delete view;
-
-        delete prefixInput;
-        delete varNameInput;
-        delete varValueInput;
-        delete diffVarInput;
-
-        delete buildTreeButton;
-        delete assignButton;
-        delete valueButton;
-        delete diffButton;
-        delete mergeConstButton;
-
-        delete infixLabel;
-        delete resultLabel;
-        delete diffLabel;
-        delete mergeConstLabel;
     }
 
 private:
     QGraphicsScene* scene;
     QGraphicsView* view;
-    
-    QLineEdit* prefixInput;  // 输入框，允许输入前缀表达式
-    QLineEdit* varNameInput; // 输入框，用于输入变量名
-    QLineEdit* varValueInput; // 输入框，用于输入变量值
-    QLineEdit* diffVarInput; // 输入框，用于输入要求偏导的变量
-
-    QPushButton* buildTreeButton;  // 按钮，点击时构建前缀表达式
-    QPushButton* assignButton;  // 按钮，点击时为变量赋值
-    QPushButton* valueButton; // 按钮，点击时计算表达式的值
-    QPushButton* diffButton; // 按钮，点击时求偏导
-    QPushButton* mergeConstButton; // 按钮，点击时进行常数合并
-
-    QLabel* infixLabel;   // 用于显示中缀表达式
-    QLabel* resultLabel;  // 用于显示计算结果
-    QLabel* diffLabel;  // 用于显示偏导结果
-    QLabel* mergeConstLabel; // 用于显示常数合并后的表达式
 
     ExpressionTree tree;
 
-    void drawTree(const ExpressionTree& tree)
-    {
-        double yOffset = 30;
-        drawNode(scene, tree.GetRoot(), 460, yOffset, 200, yOffset);  // 传递一个初始的水平间距
+    // 节点布局辅助结构
+    struct NodePosition {
+        double x;
+        double y;
+    };
+
+    struct SubtreeMetrics {
+        double width;   // 子树宽度
+        double xOffset; // 根节点的水平偏移
+    };
+
+    // 递归计算子树宽度及水平偏移
+    SubtreeMetrics computeSubtreeMetrics(TreeNode* node, double nodeWidth, double gap) {
+        if (!node) return { 0, 0 };
+
+        SubtreeMetrics leftMetrics = computeSubtreeMetrics(node->_left, nodeWidth, gap);
+        SubtreeMetrics rightMetrics = computeSubtreeMetrics(node->_right, nodeWidth, gap);
+
+        // 保持左右子树间的最小间距
+        double subtreeWidth = leftMetrics.width + rightMetrics.width + gap;
+        subtreeWidth = std::max(subtreeWidth, nodeWidth);
+
+        // 根节点的水平偏移量
+        double xOffset = leftMetrics.width + gap / 2.0;
+
+        return { subtreeWidth, xOffset };
     }
 
-    void drawNode(QGraphicsScene* scene, TreeNode* node, double x, double y, double xOffset, double& yOffset)
-    {
-        if (node == nullptr) return;
+    // 分配节点的坐标（保持对称性）
+    void assignNodePositions(TreeNode* node, double x, double y, double nodeWidth, double gap,
+        map<TreeNode*, NodePosition>& positions, const SubtreeMetrics& metrics) {
+        if (!node) return;
 
-        // 绘制节点圆圈
-        QGraphicsEllipseItem* ellipse = scene->addEllipse(x - 20, y - 20, 40, 40, QPen(Qt::black), QBrush(Qt::white));
+        // 记录当前节点位置
+        positions[node] = { x, y };
 
-        // 绘制节点文本
-        QGraphicsTextItem* textItem = scene->addText(QString::fromStdString(node->_isCh ? std::string(1, node->_ch) :
-            node->_isFunc ? node->_func :
-            to_string((int)node->_num)),
-            QFont("Arial", 12));
-        textItem->setPos(x - 15, y - 15);
-
-        // 递归绘制子节点
-        double leftX = x - xOffset;
-        double rightX = x + xOffset;
-        double newYOffset = y + 60;
-
-        // 根据子节点数量动态调整每个节点之间的间距
-        if (node->_left != nullptr) {
-            drawEdge(scene, x, y, leftX, newYOffset);
-            drawNode(scene, node->_left, leftX, newYOffset, xOffset / 1.5, yOffset);
-        }
-        if (node->_right != nullptr) {
-            drawEdge(scene, x, y, rightX, newYOffset);
-            drawNode(scene, node->_right, rightX, newYOffset, xOffset / 1.5, yOffset);
-        }
-    }
-
-    void drawEdge(QGraphicsScene* scene, double x1, double y1, double x2, double y2)
-    {
-        scene->addLine(x1, y1, x2, y2, QPen(Qt::black));
-    }
-
-    void onBuildTreeButtonClicked()  // 构建按钮点击槽函数
-    {
-        QString prefix = prefixInput->text();  // 获取输入框中的前缀表达式字符串
-        if (prefix.isEmpty()) {
-            return;
+        // 递归布置左子树
+        if (node->_left) {
+            double leftX = x - metrics.xOffset;
+            SubtreeMetrics leftMetrics = computeSubtreeMetrics(node->_left, nodeWidth, gap);
+            assignNodePositions(node->_left, leftX, y + 60, nodeWidth, gap, positions, leftMetrics);
         }
 
-        // 解析前缀表达式并构建树
-        
-        tree = ExpressionTree(prefix.toStdString());   // 假设你已经有一个方法来从前缀表达式构建树
-
-        // 更新显示中缀表达式
-        infixLabel->setText("Infix Expression: " + QString::fromStdString(tree.GetInfix()));
-
-        // 更新树的可视化
-        scene->clear();
-        drawTree(tree);
-    }
-
-    void onAssignButtonClicked()  // 赋值按钮点击槽函数
-    {
-        QString varName = varNameInput->text();  // 获取变量名
-        QString varValue = varValueInput->text();  // 获取变量值
-
-        if (varName.isEmpty() || varValue.isEmpty()) {
-            return;
+        // 递归布置右子树
+        if (node->_right) {
+            double rightX = x + metrics.xOffset;
+            SubtreeMetrics rightMetrics = computeSubtreeMetrics(node->_right, nodeWidth, gap);
+            assignNodePositions(node->_right, rightX, y + 60, nodeWidth, gap, positions, rightMetrics);
         }
-
-        // 将变量值赋给树中的相应节点
-        char varChar = varName.toStdString()[0];
-        tree.Assign(varChar, std::stod(varValue.toStdString()));
-
-        
-        // 更新显示中缀表达式
-        infixLabel->setText("Infix Expression: " + QString::fromStdString(tree.GetInfix()));
-
-        // 更新树的可视化
-        scene->clear();
-        drawTree(tree);
     }
 
-    void onValueButtonClicked()  // 求值按钮点击槽函数
-    {
-        // 计算表达式的值
-        DATATYPE result = tree.Value();
+    void drawTree(const ExpressionTree& tree) {
+        double rootX = 1000;   // 根节点初始水平位置
+        double rootY = 30;    // 根节点初始垂直位置
+        double nodeWidth = 40; // 节点宽度
+        double gap = 20;       // 默认间距
 
-        // 显示结果
-        resultLabel->setText("Result: " + QString::number(result));
-    }
+        SubtreeMetrics rootMetrics = computeSubtreeMetrics(tree.GetRoot(), nodeWidth, gap);
 
-    void onDiffButtonClicked()  // 求偏导按钮点击槽函数
-    {
-        // 获取偏导变量
-        QString diffVar = diffVarInput->text();
+        map<TreeNode*, NodePosition> positions;
+        assignNodePositions(tree.GetRoot(), rootX, rootY, nodeWidth, gap, positions, rootMetrics);
 
-        if (diffVar.isEmpty()) {
-            return;
+        for (const auto& [node, pos] : positions) {
+            // 绘制节点
+            scene->addEllipse(pos.x - 20, pos.y - 20, 40, 40, QPen(Qt::black), QBrush(Qt::white));
+            scene->addText(QString::fromStdString(node->_isCh ? string(1, node->_ch) :
+                node->_isFunc ? node->_func :
+                format("{:.1f}", node->_num)),
+                QFont("Arial", 12))
+                ->setPos(pos.x - 15, pos.y - 15);
+
+            // 绘制左子树连线
+            if (node->_left) {
+                auto leftPos = positions[node->_left];
+                scene->addLine(pos.x, pos.y, leftPos.x, leftPos.y, QPen(Qt::black));
+            }
+
+            // 绘制右子树连线
+            if (node->_right) {
+                auto rightPos = positions[node->_right];
+                scene->addLine(pos.x, pos.y, rightPos.x, rightPos.y, QPen(Qt::black));
+            }
         }
-
-        // 转换变量名为char
-        char varChar = diffVar.toStdString()[0];
-
-        // 计算偏导数
-        tree.Diff(varChar);
-
-        // 更新显示偏导表达式
-        diffLabel->setText("Partial Derivative: " + QString::fromStdString(tree.GetInfix()));
-
-        // 更新树的可视化
-        scene->clear();
-        drawTree(tree);
     }
 
-    void onMergeConstButtonClicked()  // 常数合并按钮点击槽函数
-    {
-        // 执行常数合并操作
-        tree.MergeConst();
-
-        // 更新显示合并后的中缀表达式
-        mergeConstLabel->setText("Merged Expression: " + QString::fromStdString(tree.GetInfix()));
-
-        // 更新树的可视化
-        scene->clear();
-        drawTree(tree);
-    }
 };
