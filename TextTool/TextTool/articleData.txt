@@ -1,0 +1,22 @@
+Qt
+application
+developers
+features
+user interface
+framework
+platforms
+functionality
+widgets
+tools
+cross-platform
+modules
+functionality
+community
+coding
+design
+performance
+network
+multimedia
+database
+project
+support
